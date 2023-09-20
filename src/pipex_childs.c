@@ -6,24 +6,11 @@
 /*   By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/19 22:05:46 by aherman           #+#    #+#             */
-/*   Updated: 2023/09/20 11:25:41 by aherman          ###   ########.fr       */
+/*   Updated: 2023/09/20 11:28:40 by aherman          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
-
-void	ft_free_void(void **v1)
-{
-	int	c1;
-
-	c1 = 0;
-	while (v1[c1])
-	{
-		free(v1[c1]);
-		c1++;
-	}
-	free(v1);
-}
 
 void	ft_free_char(char **str)
 {
