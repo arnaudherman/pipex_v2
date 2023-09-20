@@ -6,7 +6,7 @@
 /*   By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/18 13:33:37 by aherman           #+#    #+#             */
-/*   Updated: 2023/09/19 22:09:28 by aherman          ###   ########.fr       */
+/*   Updated: 2023/09/20 11:25:34 by aherman          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,32 +14,32 @@
 
 int	find_index_envp(char **envp)
 {
-	int		i;
+	int		c1;
 
-	i = -1;
-	while (envp[++i])
+	c1 = -1;
+	while (envp[++c1])
 	{
-		if (ft_strncmp("PATH=", envp[i], 5) == 0)
+		if (ft_strncmp("PATH=", envp[c1], 5) == 0)
 			break ;
 	}
-	return (i);
+	return (c1);
 }
 
 char	*ft_getpath(char **envp, char *prog)
 {
+	int		c1;
 	char	**env;
 	char	*path;
 	char	*new_path;
 	char	*temp;
-	int		i;
 
 	path = NULL;
-	i = find_index_envp(envp);
-	env = ft_split(envp[i] + 5, ':');
-	i = -1;
-	while (env[++i])
+	c1 = find_index_envp(envp);
+	env = ft_split(envp[c1] + 5, ':');
+	c1 = -1;
+	while (env[++c1])
 	{
-		temp = ft_strjoin(env[i], "/");
+		temp = ft_strjoin(env[c1], "/");
 		new_path = ft_strjoin(temp, prog);
 		free(temp);
 		if (access(new_path, X_OK | F_OK) == 0)
@@ -50,24 +50,11 @@ char	*ft_getpath(char **envp, char *prog)
 		else
 			free(new_path);
 	}
-	free_tab(env);
+	ft_free_char(env);
 	return (path);
 }
 
-void	free_tab(char **str)
-{
-	int	i;
-
-	i = 0;
-	while (str[i])
-	{
-		free(str[i]);
-		i++;
-	}
-	free(str);
-}
-
-void	pipex(int f1, int f2, t_info *info, char **envp)
+void	pipex(t_info *info, char **envp)
 {
 	int		status;
 
@@ -83,12 +70,12 @@ void	pipex(int f1, int f2, t_info *info, char **envp)
 	if (info->p_id_c1 < 0)
 		ft_error(-1);
 	if (info->p_id_c1 == 0)
-		child_one(f1, info->cmd1, info, envp);
+		child_one(info, envp);
 	info->p_id_c2 = fork();
 	if (info->p_id_c2 < 0)
 		ft_error(-1);
 	if (info->p_id_c2 == 0)
-		child_two(f2, info->cmd2, info, envp);
+		child_two(info, envp);
 	close(info->_pipe[0]);
 	close(info->_pipe[1]);
 	waitpid(info->p_id_c1, &status, 0);
@@ -115,6 +102,6 @@ int	main(int argc, char *argv[], char *envp[])
 		ft_error(-1);
 	info.split1 = ft_split(argv[2], ' ');
 	info.split2 = ft_split(argv[3], ' ');
-	pipex(info.fd1, info.fd2, &info, envp);
+	pipex(&info, envp);
 	return (EXIT_SUCCESS);
 }
