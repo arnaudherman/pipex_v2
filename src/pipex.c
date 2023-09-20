@@ -6,7 +6,7 @@
 /*   By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/18 13:33:37 by aherman           #+#    #+#             */
-/*   Updated: 2023/09/20 14:04:06 by aherman          ###   ########.fr       */
+/*   Updated: 2023/09/20 16:26:10 by aherman          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,5 +103,9 @@ int	main(int argc, char *argv[], char *envp[])
 	info.split1 = ft_split(argv[2], ' ');
 	info.split2 = ft_split(argv[3], ' ');
 	pipex(&info, envp);
+	free(info.cmd1);
+	free(info.cmd2);
+	ft_free_char(info.split1);
+	ft_free_char(info.split2);
 	return (EXIT_SUCCESS);
 }
