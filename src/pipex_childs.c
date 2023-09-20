@@ -6,11 +6,32 @@
 /*   By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/19 22:05:46 by aherman           #+#    #+#             */
-/*   Updated: 2023/09/20 11:28:40 by aherman          ###   ########.fr       */
+/*   Updated: 2023/09/20 13:58:17 by aherman          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
+
+char	*ft_strdup(char *src)
+{
+	size_t	c[2];
+	char	*s1;
+
+	c[0] = 0;
+	c[1] = 0;
+	while (src[c[0]])
+		c[0]++;
+	s1 = malloc(sizeof(char) * (c[0] + 1));
+	if (!s1)
+		return (NULL);
+	while (c[1] < c[0])
+	{
+		s1[c[1]] = src[c[1]];
+		c[1]++;
+	}
+	s1[c[1]] = '\0';
+	return (s1);
+}
 
 void	ft_free_char(char **str)
 {

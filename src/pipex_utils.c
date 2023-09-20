@@ -6,7 +6,7 @@
 /*   By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/19 16:31:04 by aherman           #+#    #+#             */
-/*   Updated: 2023/09/20 09:44:11 by aherman          ###   ########.fr       */
+/*   Updated: 2023/09/20 13:58:09 by aherman          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,35 +52,25 @@ int	ft_strncmp(const char *s1, const char *s2, size_t size)
 	return (((unsigned char *)s1)[c1] - ((unsigned char *)s2)[c1]);
 }
 
-char	*ft_strcat(char *dest, const char *src)
+void	ft_putchar_fd(char c, int fd)
 {
-	int	i;
-	int	j;
-
-	i = 0;
-	while (dest[i] != '\0')
-		i++;
-	j = 0;
-	while (src[j] != '\0')
-	{
-		dest[i] = src[j];
-		i++;
-		j++;
-	}
-	dest[i] = '\0';
-	return (dest);
+	write(fd, &c, 1);
 }
 
-char	*ft_strcpy(char *dest, char *src)
+void	ft_putstr_fd(char *s, int fd)
 {
 	int	c1;
 
 	c1 = 0;
-	while (src[c1])
+	while (s[c1])
 	{
-		dest[c1] = src[c1];
+		ft_putchar_fd(s[c1], fd);
 		c1++;
-	}		
-	dest[c1] = 0;
-	return (dest);
+	}
+}
+
+void	ft_putendl_fd(char *s, int fd)
+{
+	ft_putstr_fd(s, fd);
+	write(fd, "\n", 1);
 }

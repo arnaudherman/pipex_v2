@@ -6,7 +6,7 @@
 #    By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/02/27 12:15:54 by aherman           #+#    #+#              #
-#    Updated: 2023/09/19 22:10:51 by aherman          ###   ########.fr        #
+#    Updated: 2023/09/20 12:34:55 by aherman          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,6 @@ NAME = pipex
 SRCS := src/pipex.c\
 		src/pipex_utils.c\
 		src/pipex_childs.c\
-		src/pipex_need.c\
 		src/pipex_split.c\
 
 CC = gcc

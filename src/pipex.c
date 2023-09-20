@@ -6,13 +6,13 @@
 /*   By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/18 13:33:37 by aherman           #+#    #+#             */
-/*   Updated: 2023/09/20 11:28:01 by aherman          ###   ########.fr       */
+/*   Updated: 2023/09/20 14:04:06 by aherman          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/pipex.h"
 
-int	find_index_envp(char **envp)
+int	ft_find_envp(char **envp)
 {
 	int		c1;
 
@@ -25,7 +25,7 @@ int	find_index_envp(char **envp)
 	return (c1);
 }
 
-char	*ft_getpath(char **envp, char *prog)
+char	*ft_get_path(char **envp, char *cmd)
 {
 	int		c1;
 	char	**env;
@@ -34,13 +34,13 @@ char	*ft_getpath(char **envp, char *prog)
 	char	*temp;
 
 	path = NULL;
-	c1 = find_index_envp(envp);
+	c1 = ft_find_envp(envp);
 	env = ft_split(envp[c1] + 5, ':');
 	c1 = -1;
 	while (env[++c1])
 	{
 		temp = ft_strjoin(env[c1], "/");
-		new_path = ft_strjoin(temp, prog);
+		new_path = ft_strjoin(temp, cmd);
 		free(temp);
 		if (access(new_path, X_OK | F_OK) == 0)
 		{
@@ -58,10 +58,10 @@ void	pipex(t_info *info, char **envp)
 {
 	int		status;
 
-	info->cmd1 = ft_getpath(envp, info->split1[0]);
+	info->cmd1 = ft_get_path(envp, info->split1[0]);
 	if (info->cmd1 == 0)
 		ft_error(-1);
-	info->cmd2 = ft_getpath(envp, info->split2[0]);
+	info->cmd2 = ft_get_path(envp, info->split2[0]);
 	if (info->cmd2 == 0)
 		ft_error(-1);
 	if (pipe(info->_pipe) < 0)
