@@ -6,7 +6,7 @@
 /*   By: aherman <aherman@student.42lausanne.ch>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/09/18 13:33:37 by aherman           #+#    #+#             */
-/*   Updated: 2023/09/27 11:48:48 by aherman          ###   ########.fr       */
+/*   Updated: 2023/09/27 12:22:08 by aherman          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,10 +60,10 @@ void	pipex(t_info *info, char **envp)
 
 	info->cmd1 = ft_get_path(envp, info->split1[0]);
 	if (info->cmd1 == 0)
-		ft_error(-1);
+		ft_error(1);
 	info->cmd2 = ft_get_path(envp, info->split2[0]);
 	if (info->cmd2 == 0)
-		ft_error(-1);
+		ft_error(1);
 	if (pipe(info->_pipe) < 0)
 		ft_error(-1);
 	info->p_id_c1 = fork();
