@@ -1,312 +1,294 @@
-# Pipex - Communication entre processus avec des pipes
+# Pipex - Reproduction du pipe shell
 
 ![C](https://img.shields.io/badge/language-C-blue.svg)
 ![42](https://img.shields.io/badge/school-42-000000.svg)
 
 ## 📚 À propos
 
-**Pipex** est un projet système de l'école 42 qui reproduit le comportement des pipes du shell. Il permet de comprendre la communication entre processus, les redirections, et l'exécution de commandes.
+**Pipex** reproduit le comportement des pipes UNIX en C. Ce projet permet de comprendre la communication entre processus, les redirections et l'exécution de commandes système.
 
-Ce projet permet de maîtriser :
-- Les pipes (`|`) en UNIX/Linux
-- La gestion des processus (`fork`, `execve`)
-- Les file descriptors et redirections
-- La communication inter-processus
+Implémentation personnelle par **aherman** (@arnaudherman) - 42 Lausanne
 
-## 🎯 Objectif
+## 🎯 Fonctionnement
 
-Créer un programme qui reproduit le comportement suivant du shell :
-
+Reproduit la commande shell :
 ```bash
 < file1 cmd1 | cmd2 > file2
 ```
 
-Avec votre programme :
-
+Avec le programme :
 ```bash
 ./pipex file1 cmd1 cmd2 file2
 ```
 
-## 🔧 Fonctionnement
+## 🏗️ Architecture du code
 
-Le programme doit :
-1. Lire depuis `file1`
-2. Exécuter `cmd1` avec `file1` en entrée
-3. Passer la sortie de `cmd1` à `cmd2` via un pipe
-4. Écrire le résultat de `cmd2` dans `file2`
+### Structure `t_info` centralisée
 
-### Exemple
-
-```bash
-./pipex infile "grep hello" "wc -l" outfile
+```c
+typedef struct s_info
+{
+    int     _pipe[2];     // Le pipe pour la communication
+    int     fd1;          // File descriptor input
+    int     fd2;          // File descriptor output
+    char    *cmd1;        // Chemin complet de la commande 1
+    char    *cmd2;        // Chemin complet de la commande 2
+    char    **split1;     // Arguments de cmd1 splittés
+    char    **split2;     // Arguments de cmd2 splittés
+    pid_t   p_id_c1;      // PID du processus enfant 1
+    pid_t   p_id_c2;      // PID du processus enfant 2
+}   t_info;
 ```
 
-Équivalent à :
-
-```bash
-< infile grep hello | wc -l > outfile
-```
-
-## 📦 Structure du projet
+### Organisation des fichiers
 
 ```
-pipex.c               # Programme principal
-pipex.h               # Header
-parsing.c             # Parsing des arguments et commandes
-execution.c           # Exécution des commandes
-pipes.c               # Gestion des pipes
-utils.c               # Fonctions utilitaires
-error.c               # Gestion des erreurs
-Makefile              # Compilation
+src/
+├── pipex.c           # Main + recherche PATH + orchestration
+├── pipex_childs.c    # Gestion des processus enfants
+├── pipex_split.c     # ft_split personnalisé
+├── pipex_utils.c     # Fonctions utilitaires
+include/
+└── pipex.h           # Header principal
+ft_printf/            # ft_printf intégré
 ```
+
+## 🔧 Fonctions clés de l'implémentation
+
+### 1. `ft_get_path()` - Recherche intelligente des commandes
+
+```c
+char *ft_get_path(char **envp, char *cmd)
+```
+
+**Ce qu'elle fait :**
+- Trouve la ligne `PATH=` dans `envp` avec `ft_find_envp()`
+- Split le PATH par `':'` pour obtenir tous les chemins
+- Pour chaque chemin :
+  - Construit `chemin + "/" + cmd`
+  - Teste avec `access(X_OK | F_OK)`
+  - Retourne le premier chemin valide
+- Libère proprement toute la mémoire allouée
+
+### 2. Validation stricte dans `main()`
+
+```c
+if (argc != 5 || argv[2][0] == '\0' || argv[3][0] == '\0')
+```
+
+**Vérifie :**
+- Exactement 5 arguments (pas plus, pas moins)
+- Les commandes ne sont **pas vides** (protection contre `""`)
+- Messages d'erreur personnalisés selon le cas
+
+### 3. `child_one()` - Premier processus
+
+```c
+void child_one(t_info *info, char **envp)
+{
+    close(info->_pipe[0]);                  // Ferme lecture du pipe
+    dup2(info->fd1, STDIN_FILENO);          // Redirige stdin vers file1
+    dup2(info->_pipe[1], STDOUT_FILENO);    // Redirige stdout vers pipe
+    close(info->fd1);
+    close(info->_pipe[1]);
+    execve(info->cmd1, info->split1, envp); // Execute cmd1
+}
+```
+
+### 4. `child_two()` - Second processus avec synchronisation
+
+```c
+void child_two(t_info *info, char **envp)
+{
+    dup2(info->fd2, STDOUT_FILENO);         // Redirige stdout vers file2
+    dup2(info->_pipe[0], STDIN_FILENO);     // Redirige stdin depuis pipe
+    close(info->_pipe[1]);
+    close(info->fd2);
+    waitpid(info->p_id_c1, &status, 0);     // ⚠️ Attend child_one
+    execve(info->cmd2, info->split2, envp); // Execute cmd2
+}
+```
+
+**Particularité :** `child_two()` attend explicitement que `child_one` termine avant d'exécuter sa commande.
 
 ## 💻 Compilation
 
 ```bash
-# Compiler le programme
-make
-
-# Nettoyer les fichiers objets
-make clean
-
-# Nettoyer tous les fichiers générés
-make fclean
-
-# Recompiler entièrement
-make re
+make        # Compile le projet
+make clean  # Nettoie les .o
+make fclean # Nettoie tout
+make re     # Recompile tout
 ```
 
 ## 🚀 Utilisation
 
-### Format de base
+### Format
 
 ```bash
-./pipex file1 cmd1 cmd2 file2
+./pipex infile "cmd1" "cmd2" outfile
 ```
 
-### Exemples pratiques
+### Exemples
 
 ```bash
-# Exemple 1 : Chercher et compter
-./pipex input.txt "grep 42" "wc -l" output.txt
+# Équivalent : < input.txt grep hello | wc -l > output.txt
+./pipex input.txt "grep hello" "wc -l" output.txt
 
-# Exemple 2 : Lister et trier
-./pipex input.txt "cat" "sort" output.txt
+# Équivalent : < file.txt cat | cat > out.txt
+./pipex file.txt "cat" "cat" out.txt
 
-# Exemple 3 : Avec options
-./pipex input.txt "grep -i hello" "wc -w" output.txt
+# Avec options
+./pipex input.txt "ls -l" "grep .c" output.txt
 ```
 
-### Comparaison avec le shell
+## 🔍 Gestion des erreurs
 
-```bash
-# Avec pipex
-./pipex infile "ls -l" "grep txt" outfile
-
-# Équivalent shell
-< infile ls -l | grep txt > outfile
-```
-
-## 🎯 Fonctions système utilisées
-
-| Fonction | Description |
-|----------|-------------|
-| `fork()` | Crée un nouveau processus |
-| `pipe()` | Crée un pipe pour la communication |
-| `dup2()` | Duplique un file descriptor |
-| `execve()` | Remplace le processus par une commande |
-| `access()` | Vérifie les permissions d'un fichier |
-| `wait()` / `waitpid()` | Attend la fin d'un processus |
-| `open()` | Ouvre un fichier |
-| `close()` | Ferme un file descriptor |
-| `read()` / `write()` | Lecture/écriture |
-| `unlink()` | Supprime un fichier |
-
-## 🧠 Concepts clés
-
-### 1. Les Pipes
-
-Un pipe permet de connecter la sortie d'un processus à l'entrée d'un autre :
+### Messages personnalisés
 
 ```c
-int pipefd[2];
-pipe(pipefd);  // pipefd[0] = lecture, pipefd[1] = écriture
-```
-
-### 2. Fork
-
-`fork()` crée un processus enfant :
-
-```c
-pid_t pid = fork();
-if (pid == 0)
-    // Code du processus enfant
+if (argc != 5)
+    ft_putendl_fd("Error: Invalid number of arguments", 2);
 else
-    // Code du processus parent
+    ft_putendl_fd("Error: Command null", 2);
 ```
 
-### 3. Dup2
-
-`dup2()` redirige les entrées/sorties :
+### Validation des commandes
 
 ```c
-dup2(file_fd, STDIN_FILENO);   // Redirige stdin
-dup2(pipe_fd, STDOUT_FILENO);  // Redirige stdout
+if (info->cmd1 == 0)
+    ft_error(1);  // "Error: command does not exist"
 ```
 
-### 4. Execve
-
-`execve()` remplace le processus actuel par une commande :
+### Erreurs système
 
 ```c
-char *argv[] = {"grep", "hello", NULL};
-execve("/usr/bin/grep", argv, envp);
+ft_error(-1);  // Utilise perror("Error")
 ```
 
-## 📖 Gestion des erreurs
+## 📋 Fonctions utilitaires réécrites
 
-Le programme doit gérer :
-- Fichiers inexistants ou sans permissions
-- Commandes invalides
-- Erreurs d'exécution
-- Problèmes de mémoire
-- Échec des appels système
+Toutes les fonctions sont implémentées dans le projet (pas de libft externe) :
 
-```bash
-# Erreurs possibles
-./pipex nofile "cat" "grep a" outfile    # Fichier inexistant
-./pipex infile "invalid_cmd" "cat" out   # Commande invalide
-./pipex infile "ls" "wc" /root/out       # Permission refusée
-```
-
-## 🔄 Bonus
-
-### Multiple pipes
-
-Gérer plusieurs commandes en chaîne :
-
-```bash
-./pipex file1 cmd1 cmd2 cmd3 ... cmdn file2
-```
-
-Équivalent à :
-
-```bash
-< file1 cmd1 | cmd2 | cmd3 | ... | cmdn > file2
-```
-
-### Here_doc
-
-Implémenter le comportement du `<<` :
-
-```bash
-./pipex here_doc LIMITER cmd1 cmd2 file
-```
-
-Équivalent à :
-
-```bash
-cmd1 << LIMITER | cmd2 >> file
-```
-
-Exemple :
-
-```bash
-./pipex here_doc EOF "grep hello" "wc -l" outfile
-```
+- `ft_split()` - Split personnalisé avec gestion mémoire
+- `ft_strlen()` - Calcul de longueur
+- `ft_strdup()` - Duplication de chaîne
+- `ft_strjoin()` - Concaténation avec malloc
+- `ft_strncmp()` - Comparaison de chaînes
+- `ft_putendl_fd()` - Affichage avec retour ligne
+- `ft_free_char()` - Libération de tableau de chaînes
 
 ## 🧪 Tests
 
 ### Tests basiques
 
 ```bash
-# Test 1 : Commandes simples
+# Test simple
+echo "hello world" > input.txt
 ./pipex input.txt "cat" "cat" output.txt
-diff input.txt output.txt
+cat output.txt  # Doit afficher "hello world"
 
-# Test 2 : Avec grep et wc
-./pipex input.txt "grep a" "wc -l" output.txt
+# Test avec grep et wc
+echo -e "hello\nworld\nhello" > input.txt
+./pipex input.txt "grep hello" "wc -l" output.txt
+cat output.txt  # Doit afficher "2"
+```
 
-# Test 3 : Comparaison avec shell
+### Comparaison avec le shell
+
+```bash
+# Avec le shell
 < input.txt grep a | wc -l > expected.txt
+
+# Avec pipex
 ./pipex input.txt "grep a" "wc -l" output.txt
+
+# Comparer
 diff expected.txt output.txt
 ```
 
 ### Tests d'erreurs
 
 ```bash
+# Mauvais nombre d'arguments
+./pipex file1 "cat"
+# Sortie : "Error: Invalid number of arguments"
+
+# Commande vide
+./pipex input.txt "" "cat" output.txt
+# Sortie : "Error: Command null"
+
+# Commande inexistante
+./pipex input.txt "invalidcmd" "cat" output.txt
+# Sortie : "Error: command does not exist"
+
 # Fichier inexistant
-./pipex nofile "cat" "cat" out
-
-# Commande invalide
-./pipex input.txt "invalidcmd" "cat" out
-
-# Permissions
-./pipex /etc/shadow "cat" "cat" out
+./pipex nofile "cat" "cat" output.txt
+# Sortie : "Error: [message système]"
 ```
 
-### Testeurs recommandés
-
-- [pipex_tester](https://github.com/vfurmane/pipex-tester)
-- Tests manuels avec comparaison shell
-
-## 📚 Ressources
-
-- [Sujet officiel (PDF)](https://raw.githubusercontent.com/aposipov/42cursus/main/subjects/2_pipex%282%29.pdf)
-- [Guide complet Pipex](https://dev.to/herbievine/42-a-comprehensive-guide-to-pipex-5165)
-- [Rapport détaillé](https://unam3dd.github.io/2024/05/16/pipex/)
-- [Sujet (FR)](https://github.com/9x14S/42-Cursus-Subjects/blob/main/Cursus/pipex/fr.subject.pdf)
-- [Sujet (EN)](https://github.com/Ian-Orwel/42-Cursus-Subjects)
-
-## 💡 Conseils
-
-1. **Commencez par la partie obligatoire** : Ne faites le bonus qu'après
-2. **Testez avec le vrai shell** : Comparez toujours vos résultats
-3. **Gérez les erreurs** : Testez tous les cas limites
-4. **Fermez les file descriptors** : Évitez les fuites
-5. **Utilisez valgrind** : Vérifiez les fuites mémoire
-6. **Libérez PATH** : Attention aux variables d'environnement
-
-### Commandes utiles pour déboguer
+### Vérifier les fuites mémoire
 
 ```bash
-# Tracer les appels système
-strace ./pipex infile "cat" "cat" outfile
-
-# Vérifier les fuites mémoire
-valgrind --leak-check=full ./pipex infile "cat" "cat" outfile
-
-# Vérifier les file descriptors
-lsof -p <PID>
+valgrind --leak-check=full --show-leak-kinds=all \
+  ./pipex input.txt "cat" "grep a" output.txt
 ```
 
-## 🔍 Schéma du processus
+## 🎯 Points techniques importants
 
+### 1. Ouverture du fichier de sortie
+
+```c
+info.fd2 = open(argv[4], O_CREAT | O_TRUNC | O_WRONLY, 0000644);
 ```
-┌─────────────┐
-│   Parent    │
-│   Process   │
-└──────┬──────┘
-       │ fork()
-       ├──────────────────────┐
-       │                      │
-┌──────▼──────┐        ┌──────▼──────┐
-│   Child 1   │  pipe  │   Child 2   │
-│    cmd1     │───────>│    cmd2     │
-└─────────────┘        └─────────────┘
-    ▲                        │
-    │ file1                  │ file2
+- **O_CREAT** : Crée le fichier s'il n'existe pas
+- **O_TRUNC** : Vide le fichier s'il existe déjà
+- **0000644** : Permissions rw-r--r--
+
+### 2. Gestion du pipe
+
+```c
+if (pipe(info->_pipe) < 0)
+    ft_error(-1);
 ```
+- `info->_pipe[0]` : lecture
+- `info->_pipe[1]` : écriture
+
+### 3. Fork et processus
+
+```c
+info->p_id_c1 = fork();
+if (info->p_id_c1 == 0)
+    child_one(info, envp);  // Code du processus enfant
+// Code du processus parent continue ici
+```
+
+### 4. Fermeture des descripteurs dans le parent
+
+```c
+close(info->_pipe[0]);
+close(info->_pipe[1]);
+waitpid(info->p_id_c1, &status, 0);
+waitpid(info->p_id_c2, &status, 0);
+```
+
+## 📝 Norminette
+
+Le code respecte la norme de 42 :
+- ✅ Maximum 25 lignes par fonction
+- ✅ Maximum 5 fonctions par fichier
+- ✅ Pas de variables déclarées après les instructions
+- ✅ Gestion propre de la mémoire
+
+## 🔗 Dépendances
+
+- **ft_printf** : Intégré dans le projet (dossier `ft_printf/`)
 
 ## 👨‍💻 Auteur
 
-Projet réalisé dans le cadre du cursus de l'école 42.
-
-## 📝 Note
-
-Pipex est un projet fondamental pour comprendre le fonctionnement des shells UNIX. Les concepts appris ici seront essentiels pour les projets suivants comme Minishell !
+**Arnaud Herman** (@arnaudherman)  
+École 42 Lausanne  
+Projet réalisé en septembre 2023
 
 ---
 
-*"Everything is a file descriptor."* 🔧✨
+*"Two processes, one pipe, infinite possibilities."* 🔧✨
